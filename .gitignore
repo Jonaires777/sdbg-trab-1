@@ -1,3 +1,6 @@
 *.exe
 *.txt
 .vscode/
+*.o
+./bptree/*.o
+bptree_app

@@ -3,8 +3,6 @@
 #include <string.h>
 #include "bptree/bptree.h"
 
-int ORDEM = ORDEM_PADRAO;
-
 void processar_csv(FILE *csv, FILE *relacao, FILE *arq_indice, FILE *saida)
 {
     char linha[LINHA_MAX];

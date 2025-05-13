@@ -19,8 +19,6 @@ typedef struct NoBMais
     int posicao_arquivo;
 } NoBMais;
 
-extern int ORDEM;
-
 NoBMais *criar_no(bool folha);
 int salvar_no(NoBMais *no, FILE *arq);
 NoBMais *carregar_no(int linha, FILE *arq);
