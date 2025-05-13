@@ -1,29 +1,19 @@
 #ifndef BPTREE_H
 #define BPTREE_H
 
-#include <stdbool.h>
-#include <stdio.h>
+#define MAX_KEYS 3  // Max keys per node (order = MAX_KEYS + 1)
 
-#define ORDEM_PADRAO 3
-#define MAX_FILHOS 10
-#define LINHA_MAX 256
+typedef struct BPTreeNode {
+    int keys[MAX_KEYS];
+    void* children[MAX_KEYS + 1]; // Child pointers or NULL for leaf
+    int is_leaf;
+    int num_keys;
+    struct BPTreeNode* next; // Only for leaf nodes
+} BPTreeNode;
 
-typedef struct NoBMais
-{
-    bool folha;
-    int num_chaves;
-    int chaves[MAX_FILHOS - 1];
-    int filhos[MAX_FILHOS];
-    int valores[MAX_FILHOS - 1];
-    int proximo;
-    int posicao_arquivo;
-} NoBMais;
-
-NoBMais *criar_no(bool folha);
-int salvar_no(NoBMais *no, FILE *arq);
-NoBMais *carregar_no(int linha, FILE *arq);
-int inserir(int chave, int valor, FILE *arq_indice);
-int buscar(int chave, FILE *arq_indice);
-int calcular_altura(FILE *arq_indice);
+BPTreeNode* bptree_insert(BPTreeNode* root, int key);
+int bptree_search(BPTreeNode* root, int key);
+int bptree_height(BPTreeNode* root);
+void bptree_free(BPTreeNode* root);
 
 #endif

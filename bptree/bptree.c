@@ -1,134 +1,125 @@
-#include "bptree.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include "bptree.h"
 
-int ORDEM = 3;
-
-NoBMais *criar_no(bool folha)
-{
-    NoBMais *novo = (NoBMais *)malloc(sizeof(NoBMais));
-    novo->folha = folha;
-    novo->num_chaves = 0;
-    novo->proximo = -1;
-    novo->posicao_arquivo = -1;
-    for (int i = 0; i < MAX_FILHOS; i++)
-        novo->filhos[i] = -1;
-    return novo;
+static BPTreeNode* create_node(int is_leaf) {
+    BPTreeNode* node = malloc(sizeof(BPTreeNode));
+    node->is_leaf = is_leaf;
+    node->num_keys = 0;
+    node->next = NULL;
+    for (int i = 0; i < MAX_KEYS + 1; i++) {
+        node->children[i] = NULL;
+    }
+    return node;
 }
 
-int salvar_no(NoBMais *no, FILE *arq)
-{
-    if (no->posicao_arquivo == -1)
-    {
-        fseek(arq, 0, SEEK_END);
-        no->posicao_arquivo = ftell(arq) / LINHA_MAX;
+static void split_child(BPTreeNode* parent, int index) {
+    BPTreeNode* old_child = parent->children[index];
+    BPTreeNode* new_child = create_node(old_child->is_leaf);
+    new_child->num_keys = MAX_KEYS / 2;
+
+    // Copy the second half to new_child
+    for (int i = 0; i < MAX_KEYS / 2; i++) {
+        new_child->keys[i] = old_child->keys[i + (MAX_KEYS + 1) / 2];
     }
-    else
-    {
-        fseek(arq, no->posicao_arquivo * LINHA_MAX, SEEK_SET);
+    if (!old_child->is_leaf) {
+        for (int i = 0; i <= MAX_KEYS / 2; i++) {
+            new_child->children[i] = old_child->children[i + (MAX_KEYS + 1) / 2];
+        }
+    }
+    old_child->num_keys = (MAX_KEYS + 1) / 2;
+
+    // Insert the new child into parent
+    for (int i = parent->num_keys; i > index; i--) {
+        parent->children[i + 1] = parent->children[i];
+        parent->keys[i] = parent->keys[i - 1];
     }
 
-    char linha[LINHA_MAX];
-    if (no->folha)
-    {
-        snprintf(linha, LINHA_MAX, "FOL|%d|", no->num_chaves);
-        for (int i = 0; i < no->num_chaves; i++)
-        {
-            char temp[32];
-            snprintf(temp, sizeof(temp), "%d:%d ", no->chaves[i], no->valores[i]);
-            strcat(linha, temp);
-        }
-        char prox[32];
-        snprintf(prox, sizeof(prox), "|%d\n", no->proximo);
-        strcat(linha, prox);
-    }
-    else
-    {
-        snprintf(linha, LINHA_MAX, "INT|%d|", no->num_chaves);
-        for (int i = 0; i < no->num_chaves; i++)
-        {
-            char temp[16];
-            snprintf(temp, sizeof(temp), "%d ", no->chaves[i]);
-            strcat(linha, temp);
-        }
-        strcat(linha, "|");
-        for (int i = 0; i <= no->num_chaves; i++)
-        {
-            char temp[16];
-            snprintf(temp, sizeof(temp), "%d ", no->filhos[i]);
-            strcat(linha, temp);
-        }
-        strcat(linha, "\n");
-    }
+    parent->children[index + 1] = new_child;
+    parent->keys[index] = old_child->keys[old_child->num_keys - 1];
+    parent->num_keys++;
 
-    fputs(linha, arq);
-    fflush(arq);
-    return no->posicao_arquivo;
+    // Handle leaf next pointers
+    if (old_child->is_leaf) {
+        new_child->next = old_child->next;
+        old_child->next = new_child;
+    }
 }
 
-NoBMais *carregar_no(int linha, FILE *arq)
-{
-    fseek(arq, linha * LINHA_MAX, SEEK_SET);
-    char buffer[LINHA_MAX];
-    if (!fgets(buffer, LINHA_MAX, arq))
-        return NULL;
+static BPTreeNode* insert_non_full(BPTreeNode* node, int key) {
+    int i = node->num_keys - 1;
 
-    NoBMais *no = (NoBMais *)malloc(sizeof(NoBMais));
-    no->posicao_arquivo = linha;
-
-    char tipo[4];
-    sscanf(buffer, "%3[^|]", tipo);
-    no->folha = strcmp(tipo, "FOL") == 0;
-
-    if (no->folha)
-    {
-        sscanf(buffer, "FOL|%d|", &no->num_chaves);
-        char *dados = strchr(buffer, '|');
-        dados = strchr(dados + 1, '|') + 1;
-        for (int i = 0; i < no->num_chaves; i++)
-        {
-            sscanf(dados, "%d:%d", &no->chaves[i], &no->valores[i]);
-            dados = strchr(dados, ' ') + 1;
+    if (node->is_leaf) {
+        while (i >= 0 && key < node->keys[i]) {
+            node->keys[i + 1] = node->keys[i];
+            i--;
         }
-        sscanf(strrchr(buffer, '|') + 1, "%d", &no->proximo);
+        node->keys[i + 1] = key;
+        node->num_keys++;
+        return node;
     }
-    else
-    {
-        sscanf(buffer, "INT|%d|", &no->num_chaves);
-        char *dados = strchr(buffer, '|');
-        dados = strchr(dados + 1, '|') + 1;
-        for (int i = 0; i < no->num_chaves; i++)
-        {
-            sscanf(dados, "%d", &no->chaves[i]);
-            dados = strchr(dados, ' ') + 1;
-        }
-        dados = strchr(dados, '|') + 1;
-        for (int i = 0; i <= no->num_chaves; i++)
-        {
-            sscanf(dados, "%d", &no->filhos[i]);
-            dados = strchr(dados, ' ');
-            if (dados)
-                dados++;
+
+    while (i >= 0 && key < node->keys[i]) i--;
+    i++;
+
+    BPTreeNode* child = node->children[i];
+    if (child->num_keys == MAX_KEYS) {
+        split_child(node, i);
+        if (key > node->keys[i]) i++;
+    }
+
+    node->children[i] = insert_non_full(node->children[i], key);
+    return node;
+}
+
+BPTreeNode* bptree_insert(BPTreeNode* root, int key) {
+    if (!root) {
+        root = create_node(1);
+        root->keys[0] = key;
+        root->num_keys = 1;
+        return root;
+    }
+
+    if (root->num_keys == MAX_KEYS) {
+        BPTreeNode* new_root = create_node(0);
+        new_root->children[0] = root;
+        split_child(new_root, 0);
+        return insert_non_full(new_root, key);
+    }
+
+    return insert_non_full(root, key);
+}
+
+int bptree_search(BPTreeNode* node, int key) {
+    if (!node) return 0;
+
+    int i = 0;
+    while (i < node->num_keys && key > node->keys[i]) i++;
+
+    if (i < node->num_keys && key == node->keys[i]) return 1;
+
+    if (node->is_leaf) return 0;
+
+    return bptree_search((BPTreeNode*)node->children[i], key);
+}
+
+int bptree_height(BPTreeNode* root) {
+    int height = 0;
+    BPTreeNode* node = root;
+    while (node && !node->is_leaf) {
+        height++;
+        node = node->children[0];
+    }
+    return node ? height + 1 : 0;
+}
+
+void bptree_free(BPTreeNode* node) {
+    if (!node) return;
+
+    if (!node->is_leaf) {
+        for (int i = 0; i <= node->num_keys; i++) {
+            bptree_free((BPTreeNode*)node->children[i]);
         }
     }
-    return no;
-}
-
-int inserir(int chave, int valor, FILE *arq_indice)
-{
-    // TODO: implementar inserção em árvore B+ com leitura/escrita em arquivo
-    return 1;
-}
-
-int buscar(int chave, FILE *arq_indice)
-{
-    // TODO: implementar busca em árvore B+ com leitura de arquivo
-    return 1;
-}
-
-int calcular_altura(FILE *arq_indice)
-{
-    // TODO: ler os nós da raiz até folha e contar altura
-    return 1;
+    free(node);
 }
