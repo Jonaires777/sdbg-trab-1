@@ -28,31 +28,24 @@ void write_bptree_node_to_file(FILE* file, int index, int parent, const BPTreeNo
 
     // children
     fprintf(file, "[");
-    int has_written = 0;
+    int has_written_children = 0;
     for (int i = 0; i < MAX_KEYS + 1; i++) {
         if (node->children[i] != -1) {
-            if (has_written) fprintf(file, ",");
+            if (has_written_children) fprintf(file, ",");
             fprintf(file, "%d", node->children[i]);
-            has_written = 1;
+            has_written_children = 1;
         }
     }
     fprintf(file, "],");
 
     // refs
     fprintf(file, "[");
+    int has_written_refs = 0;
     for (int i = 0; i < MAX_KEYS + 1; i++) {
-        fprintf(file, "[");
-        int has_written = 0;
-        for (int j = 0; j < MAX_KEYS + 1; j++) {
-            if (node->refs[i][j] != -1) {
-                if (has_written) fprintf(file, ",");
-                fprintf(file, "%d", node->refs[i][j]);
-                has_written = 1;
-            }
-        }
-        fprintf(file, "]");
-        if (i != MAX_KEYS) {
-            fprintf(file, ",");
+        if (node->refs[i] != -1) {
+            if (has_written_refs) fprintf(file, ",");
+            fprintf(file, "%d", node->refs[i]);
+            has_written_refs = 1;
         }
     }
     fprintf(file, "]\n");
@@ -60,18 +53,22 @@ void write_bptree_node_to_file(FILE* file, int index, int parent, const BPTreeNo
     fclose(file);
 }
 
-static BPTreeNode* create_node(int is_leaf) {
+static BPTreeNode* create_node(int is_leaf, int max_keys) {
     BPTreeNode* node = malloc(sizeof(BPTreeNode));
+    node->keys = malloc(sizeof(int) * max_keys);
+    node->children = malloc(sizeof(int) * max_keys);
+    node->refs = malloc(sizeof(int) * max_keys);
+    node->degree = max_keys;
+
     node->is_leaf = is_leaf;
     node->num_keys = 0;
     node->next = -1;
+
     for (int i = 0; i < MAX_KEYS + 1; i++) {
         node->children[i] = -1;
     }
     for (int i = 0; i < MAX_KEYS + 1; i++) {
-        for (int j = 0; j < MAX_KEYS + 1; j++) {
-            node->refs[i][j] = -1;
-        }
+        node->refs[i] = -1;
     }
     return node;
 }
@@ -135,19 +132,19 @@ static BPTreeNode* create_node(int is_leaf) {
 //     return node;
 // }
 
-BPTreeNode* bptree_insert(FILE* file, BPTreeNode* root, Record record) {
+BPTreeNode* bptree_insert(FILE* file, BPTreeNode* root, Record record, int max_keys) {
     if (!root) {
-        root = create_node(1);
+        root = create_node(1, max_keys);
         root->keys[0] = record.year;
         root->num_keys = 1;
-        root->refs[0][0] = record.index;
+        root->refs[0] = record.index;
 
         write_bptree_node_to_file(file, 1, -1, root);
 
         return root;
     } 
 
-    return create_node(0);
+    return create_node(0, max_keys);
 
     // if (root->num_keys == MAX_KEYS) {
     //     BPTreeNode* new_root = create_node(0);
