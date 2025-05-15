@@ -2,14 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include "bptree/bptree.h"
 
 #define RECORD_LENGTH 50
-
-typedef struct {
-    char name[31];
-    char type[11];
-    int year;
-} Record;
 
 void create_records_file();
 Record get_record_from_file(FILE* file, int index);
@@ -31,6 +26,9 @@ int main()
     printf("NAME %s\n", record1.name);
     printf("TYPE %s\n", record1.type);
     printf("YEAR %i\n", record1.year);
+
+    FILE* index_file = fopen("bptree.txt", "a");
+    bptree_insert(index_file, NULL, record1);
 
     fclose(file);
 
@@ -68,6 +66,7 @@ void create_records_file() {
     char line[256];
     fgets(line, sizeof(line), csv_file); // Skip header
 
+    int line_counter = 0;
     while (fgets(line, sizeof(line), csv_file)) {
         int id;
         char name[30], type[10];

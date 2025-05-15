@@ -7,13 +7,21 @@ typedef struct BPTreeNode {
     int keys[MAX_KEYS];
     int is_leaf;
     int num_keys;
-    struct BPTreeNode* next; // Only for leaf nodes
-    struct BPTreeNode* children[MAX_KEYS + 1]; // Child pointers or NULL for leaf
+    int next;
+    int children[MAX_KEYS + 1];
+    int refs[MAX_KEYS + 1][MAX_KEYS + 1];
 } BPTreeNode;
 
-BPTreeNode* bptree_insert(BPTreeNode* root, int key);
-int bptree_search(BPTreeNode* root, int key);
-int bptree_height(BPTreeNode* root);
-void bptree_free(BPTreeNode* root);
+typedef struct Record {
+    int index;
+    char name[31];
+    char type[11];
+    int year;
+} Record;
+
+BPTreeNode* bptree_insert(FILE* file, BPTreeNode* root, Record record);
+// int bptree_search(BPTreeNode* root, int key);
+// int bptree_height(BPTreeNode* root);
+// void bptree_free(BPTreeNode* root);
 
 #endif
