@@ -25,6 +25,16 @@ int main()
 
     FILE* index_file = fopen("bptree.txt", "a");
     bptree_insert(index_file, NULL, record1, 3);
+    fclose(index_file);
+
+    index_file = fopen("bptree.txt", "r");
+    BPTreeNode* node = read_bptree_node_from_file(index_file, 0, 3);
+    for (int i = 0; i < node->num_keys; i++) {
+        printf("CHILD[%i]: %d\n", i, node->children[i]);
+        printf("KEY[%i]: %d\n", i, node->keys[i]);
+        printf("REF[%i]: %d\n", i, node->refs[i]);
+    }
+    fclose(index_file);
 
     fclose(file);
 
