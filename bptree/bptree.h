@@ -5,10 +5,10 @@
 
 typedef struct BPTreeNode {
     int keys[MAX_KEYS];
-    void* children[MAX_KEYS + 1]; // Child pointers or NULL for leaf
     int is_leaf;
     int num_keys;
     struct BPTreeNode* next; // Only for leaf nodes
+    struct BPTreeNode* children[MAX_KEYS + 1]; // Child pointers or NULL for leaf
 } BPTreeNode;
 
 BPTreeNode* bptree_insert(BPTreeNode* root, int key);
