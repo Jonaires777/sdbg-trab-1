@@ -12,8 +12,8 @@ typedef struct {
 } Record;
 
 void create_records_file();
-Record get_record_by_index(FILE* file, int index);
-
+Record get_record_from_file(FILE* file, int index);
+Record read_record_buffer(char* buffer);
 
 int main()
 {
@@ -26,7 +26,7 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    Record record1 = get_record_by_index(file, 0);
+    Record record1 = get_record_from_file(file, 0);
 
     printf("NAME %s\n", record1.name);
     printf("TYPE %s\n", record1.type);
@@ -35,6 +35,20 @@ int main()
     fclose(file);
 
     return 0;
+}
+
+Record read_record_buffer(char* buffer) {
+    Record record = {0};
+    char year[4] = {0};
+    strncpy(record.name, buffer, 30);
+    strncpy(record.type, buffer + 30, 10);
+    strncpy(year, buffer + 40, 4);
+
+    record.name[30] = '\0';
+    record.type[10] = '\0';
+    record.year = atoi(year);
+
+    return record;
 }
 
 void create_records_file() {
@@ -67,7 +81,10 @@ void create_records_file() {
                 "%-30s%-10s%4d      ", // 30 + 10 + 4 + 6 = 50
                 name, type, year);
 
+            // Insert Record in File
             fwrite(buffer, sizeof(char), RECORD_LENGTH, txt_file); // Write raw 50 chars
+            // TODO: Insert Record in Tree file;
+            // insert_in_tree();
         }
     }
 
@@ -75,7 +92,7 @@ void create_records_file() {
     fclose(txt_file);
 }
 
-Record get_record_by_index(FILE* file, int index) {
+Record get_record_from_file(FILE* file, int index) {
     // Calculate byte offset
     long offset = (long)index * RECORD_LENGTH;
 
@@ -93,15 +110,5 @@ Record get_record_by_index(FILE* file, int index) {
         exit(EXIT_FAILURE);
     } 
 
-    Record record = {0};
-    char year[4] = {0};
-    strncpy(record.name, buffer, 30);
-    strncpy(record.type, buffer + 30, 10);
-    strncpy(year, buffer + 40, 4);
-
-    record.name[30] = '\0';
-    record.type[10] = '\0';
-    record.year = atoi(year);
-
-    return record;
+    return read_record_buffer(buffer);
 }
